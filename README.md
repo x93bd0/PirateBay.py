@@ -14,12 +14,12 @@ pip install .
 
 ## A very simple example that search's "The Tomorrow War" in the Video.Movies category and prints result's
 ```python
-import PirateBay
+import PirateBayAPI
 import typing
 
 # Static Typing isn't required (but recomended)
-results: typing.List[PirateBay.SearchElement] = PirateBay.Search(
-    "The Tomorrow War", PirateBay.VideoType.Movies)
+results: typing.List[PirateBayAPI.SearchElement] = PirateBayAPI.Search(
+    "The Tomorrow War", PirateBayAPI.VideoType.Movies)
 
 for result in results:
     print("File: {} {}.Mb (id:{})".format(
@@ -28,13 +28,13 @@ for result in results:
 
 ## Another example, in this case, we get the download magnet link from the first result of the search
 ```python
-import PirateBay
+import PirateBayAPI
 import typing
 
 # Static Typing isn't required (but recomended)
-results: typing.List[PirateBay.SearchElement] = PirateBay.Search(
-    "The Tomorrow War", PirateBay.VideoType.Movies)
+results: typing.List[PirateBayAPI.SearchElement] = PirateBayAPI.Search(
+    "The Tomorrow War", PirateBayAPI.VideoType.Movies)
 
 print("Download Link: {} (size:{}.Mb)".format(
-    PirateBay.Download(results[0].id), round(results[0].size/1024/1024, 2)))
+    PirateBayAPI.Download(results[0].id), round(results[0].size/1024/1024, 2)))
 ```
