@@ -29,11 +29,14 @@ import enum
 import re
 
 
-trackers: typing.Optional[typing.List[str]] = None
-trackers_re: str = "function print_trackers\(\){let ([^}]*)return tr;}"
+trackers_re: str = r"functionprint_trackers\(\){let([^}]*)returntr;}"
 
 
 class PirateBayError(Exception):
+    pass
+
+
+class TrackersError(Exception):
     pass
 
 
@@ -158,7 +161,10 @@ class Torrent:
     info_hash: str
 
 
-def FetchTrackers() -> typing.List[str]:
+def FetchTrackers(
+    trackers: typing.Optional[typing.List[str]] = [],
+    includeDisabledTrackers: bool = False,
+) -> typing.List[str]:
     """
     Fetchs trackers and stores them into
      trackers variable for speed
@@ -166,32 +172,40 @@ def FetchTrackers() -> typing.List[str]:
     @return: trackers list
     """
 
-    global trackers
     if not trackers:
-        script: str = \
-            requests.get("https://thepiratebay.org/static/main.js").text
+        script: str = requests.get("https://thepiratebay.org/static/main.js").text
+        script = script.replace(" ", "").replace("\n", "").replace("\t", "")
 
-        function: str = re.findall(trackers_re, script)[0]
-        temp: str = function.replace("tr+='&tr='+", "")
-        temp = temp.replace("encodeURIComponent('", "")
-        temp = temp.replace("tr='&tr='+", "")
-        temp = temp.replace("')", "")
-        temp = temp[:len(temp)-1]
+        function: typing.List[str] = re.findall(trackers_re, script)
+        if not function:
+            raise TrackersError("No available trackers")
 
-        trackers = temp.split(";")
+        for fun in function:
+            for trackerRaw in fun.split(";"):
+                if not includeDisabledTrackers and trackerRaw.startswith("//"):
+                    continue
 
+                try:
+                    trackers.append(
+                        trackerRaw[trackerRaw.index("udp://") : trackerRaw.rindex("')")]
+                    )
+
+                except ValueError:
+                    continue
+
+    if not trackers:
+        raise TrackersError("No available trackers")
     return trackers
 
 
-def Trackers2String() -> str:
+def Trackers2String(*args, **kwargs) -> str:
     """
     Parses trackers list and returns an string
 
     @return: trackers args
     """
 
-    while trackers is None:
-        FetchTrackers()
+    trackers: typing.List[str] = FetchTrackers(*args, **kwargs)
 
     out: str = ""
     for tracker in trackers:
@@ -201,8 +215,8 @@ def Trackers2String() -> str:
 
 
 def Search(
-    query: str, ctype: typing.Optional[typing.Union[int, enum.Enum]] = None) \
-        -> typing.List[SearchElement]:
+    query: str, ctype: typing.Optional[typing.Union[int, enum.Enum]] = None
+) -> typing.List[SearchElement]:
     """
     Searchs into PirateBay
 
@@ -218,31 +232,36 @@ def Search(
     elif isinstance(ctype, enum.Enum):
         sctype = type(ctype).BaseNO.value + ctype.value
 
-    data: requests.Response = requests.get("https://apibay.org/q.php", params={
-        "q": query,
-        "cat": sctype
-    })
+    data: requests.Response = requests.get(
+        "https://apibay.org/q.php", params={"q": query, "cat": sctype}
+    )
 
     if data.status_code != 200:
         raise PirateBayError
 
     out: typing.List[SearchElement] = []
     for elem in data.json():
-        out.append(SearchElement(
-            int(elem["id"]), elem["name"],
-            elem["info_hash"], int(elem["leechers"]),
-            int(elem["seeders"]), int(elem["num_files"]),
-            int(elem["size"]), elem["username"],
-            datetime.datetime.fromtimestamp(int(elem["added"])),
-            elem["status"], int(elem["category"]),
-            elem["imdb"]
-        ))
+        out.append(
+            SearchElement(
+                int(elem["id"]),
+                elem["name"],
+                elem["info_hash"],
+                int(elem["leechers"]),
+                int(elem["seeders"]),
+                int(elem["num_files"]),
+                int(elem["size"]),
+                elem["username"],
+                datetime.datetime.fromtimestamp(int(elem["added"])),
+                elem["status"],
+                int(elem["category"]),
+                elem["imdb"],
+            )
+        )
 
     return out
 
 
-def GetFiles(file_id: int) \
-        -> typing.Tuple[int, typing.List[typing.Tuple[str, int]]]:
+def GetFiles(file_id: int) -> typing.Tuple[int, typing.List[typing.Tuple[str, int]]]:
     """
     Fetch's filelist from PirateBay using its file_id
 
@@ -251,7 +270,8 @@ def GetFiles(file_id: int) \
     """
 
     data: requests.Response = requests.get(
-        "https://apibay.org/f.php", params={"id": file_id})
+        "https://apibay.org/f.php", params={"id": file_id}
+    )
 
     if data.status_code != 200:
         raise PirateBayError
@@ -278,20 +298,29 @@ def GetTorrentInfo(file_id: int) -> Torrent:
     @return: Torrent object
     """
     data: requests.Response = requests.get(
-        "https://apibay.org/t.php", params={"id": file_id})
-    
+        "https://apibay.org/t.php", params={"id": file_id}
+    )
+
     if data.status_code != 200:
         raise PirateBayError
-    
+
     t: typing.Dict[str, typing.Any] = data.json()
     return Torrent(
-        int(t["id"]), int(t["category"]),
-        t["status"], t["name"], int(t["num_files"]),
-        int(t["size"]), int(t["seeders"]),
-        int(t["leechers"]), t["username"],
+        int(t["id"]),
+        int(t["category"]),
+        t["status"],
+        t["name"],
+        int(t["num_files"]),
+        int(t["size"]),
+        int(t["seeders"]),
+        int(t["leechers"]),
+        t["username"],
         datetime.datetime.fromtimestamp(int(t["added"])),
-        t["descr"], t["imdb"], t["language"],
-        t["textlanguage"], t["info_hash"]
+        t["descr"],
+        t["imdb"],
+        t["language"],
+        t["textlanguage"],
+        t["info_hash"],
     )
 
 
@@ -305,5 +334,8 @@ def Download(file_id: int) -> str:
     """
 
     info: Torrent = GetTorrentInfo(file_id)
-    return "magnet:?xt=urn:btih:{}&dn={}{}".format(
-        info.info_hash, html.escape(info.name), Trackers2String())
+    return html.escape(
+        "magnet:?xt=urn:btih:{}&dn={}{}".format(
+            info.info_hash, info.name, Trackers2String()
+        )
+    )

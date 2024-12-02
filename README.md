@@ -1,18 +1,18 @@
 # PirateBay.py
-This project is intended to be an API wrapper for [apibay](https://apibay.org/q.php?q=Example) & [ThePirateBay(only main.js for the trackers)](https://thepiratebay.org/static/main.js)
+This project is intended to be an API wrapper for [apibay](https://apibay.org/q.php?q=Example) & [ThePirateBay (only the 'main.js' file for the trackers)](https://thepiratebay.org/static/main.js)
 
-# How it works
-It's own functionality is very easy to understand, its composed by a set of function's that points directly to the PirateBay API ([apibay](https://apibay.org/q.php?q=Example)) and parses the response for the programmer.
+# How does it works?
+The functionality of this project is very easy to understand, as it's composed by a set of methods that point directly to the PirateBay API ([apibay](https://apibay.org/q.php?q=Example)) with the sole purpose of parsing the response for the coder to then use it.
 
 # Installation
-You can install this project by running the following command's (Note: You need to have *requests* package installed)
+You can install this project by running the following commands:
 ```bash
 pip install PirateBayAPI
 # OR
 pip install .
 ```
 
-## A very simple example that search's "The Tomorrow War" in the Video.Movies category and prints result's
+## A very simple example that searchs "The Tomorrow War" in the Video.Movies category and prints results
 ```python
 import PirateBayAPI
 import typing
@@ -26,7 +26,7 @@ for result in results:
         result.name, round(result.size/1024/1024, 2), result.id))
 ```
 
-## Another example, in this case, we get the download magnet link from the first result of the search
+## Another example, in this case, we get the magnet link (necessary to download) of the first result of the search
 ```python
 import PirateBayAPI
 import typing
